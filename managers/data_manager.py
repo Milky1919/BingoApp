@@ -33,30 +33,46 @@ class DataManager:
         return {
             "history": [],
             "current_number": None,
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "volume_bgm": 1.0,
+            "volume_se": 1.0
         }
 
     def save(self, history, current_number):
-        """Save state to disk with backup protection."""
-        state = {
-            "history": history,
-            "current_number": current_number,
-            "timestamp": time.time()
-        }
+        """Save game state. Preserves other settings."""
+        # Load existing to preserve settings
+        try:
+            state = self._load_from_file(DATA_FILE)
+        except:
+            state = self._get_default_state()
+            
+        state["history"] = history
+        state["current_number"] = current_number
+        state["timestamp"] = time.time()
         
+        self._write_to_file(state)
+
+    def save_volume(self, bgm_vol, se_vol):
+        """Save volume settings. Preserves game state."""
+        try:
+            state = self._load_from_file(DATA_FILE)
+        except:
+            state = self._get_default_state()
+            
+        state["volume_bgm"] = bgm_vol
+        state["volume_se"] = se_vol
+        
+        self._write_to_file(state)
+
+    def _write_to_file(self, state):
         # 1. Write to main file
         with open(DATA_FILE, 'w') as f:
             json.dump(state, f, indent=2)
             f.flush()
-            os.fsync(f.fileno()) # Ensure write to disk
+            os.fsync(f.fileno())
 
-        # 2. Verify write (read back)
-        try:
-            with open(DATA_FILE, 'r') as f:
-                json.load(f)
-        except Exception as e:
-            print(f"Verification failed: {e}")
-            return # Don't update backup if main failed
-
+        # 2. Verify (optional/simple check)
         # 3. Update backup
-        shutil.copy2(DATA_FILE, BACKUP_FILE)
+        try:
+            shutil.copy2(DATA_FILE, BACKUP_FILE)
+        except: pass

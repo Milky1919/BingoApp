@@ -80,15 +80,18 @@ class SpinAnimation:
         self.path_index = 0 
         self.TOTAL_FRAMES = len(self.velocity_profile)
         self._last_displayed = -1
+        self.last_audio_time = 0 
         
         self._animate_step()
 
     def _animate_step(self):
         if not self.is_running: return
+        import time 
         
         current_display_number = None
         trail_numbers = [] 
         play_sound = False
+        now = time.time()
         
         if self.current_frame < len(self.velocity_profile):
             v = self.velocity_profile[self.current_frame]
@@ -104,9 +107,9 @@ class SpinAnimation:
             head_num = current_display_number
             
             # --- Trail Logic ---
-            if v > 1.5: trail_len = 2 # Speedster
+            if v > 1.5: trail_len = 2 
             elif v > 0.5: trail_len = 1
-            else: trail_len = 0 # No trail at slow speeds
+            else: trail_len = 0 
             
             trail_numbers = [(head_num, 0)]
             if trail_len > 0:
@@ -115,8 +118,21 @@ class SpinAnimation:
                      trail_numbers.append((val, i + 1))
             
             # --- Sound Logic ---
+            # Unified approach: Play sounds based on visual change, but cap max frequency to ~60Hz
+            # High speed (v=2.0) -> Changes every frame (16ms) -> Plays every frame
+            # Decel (v=0.5) -> Changes every 2 frames (32ms) -> Plays every 2 frames
+            # This ensures High Speed is always faster (or equal to max frame rate) than Decel.
+            
+            # MIN_INTERVAL should be ~30ms to allow ~30Hz playback.
+            # 16ms frames -> 32ms (30Hz) trigger allowed.
+            # This is significantly faster than typical deceleration curve, preserving the "High Speed > Slow Speed" feeling.
+            MIN_INTERVAL = 0.03 
+            
             if self._last_displayed != head_num and self._last_displayed != -1:
-                play_sound = True
+                # Check time to prevent glitches
+                if now - self.last_audio_time >= MIN_INTERVAL:
+                    play_sound = True
+                    self.last_audio_time = now
             
             self._last_displayed = head_num
 
@@ -128,8 +144,8 @@ class SpinAnimation:
                 self.on_step_finish(trail_numbers) 
             
             if play_sound:
-                # Basic sound trigger
-                self.audio.play_se("move")
+                # Limit duration to 200ms to allow overlapping but prevent channel exhaustion
+                self.audio.play_se("move", maxtime=200)
                 
             self._cancel_id = self.root.after(16, self._animate_step)
             
@@ -142,7 +158,7 @@ class SpinAnimation:
         # Force final update
         self.on_update_display(final_number)
         self.on_step_finish([(final_number, 0)]) 
-        self.audio.play_se("move") 
+        # Removed redundant "move" sound here. Only "decide" should play.
         self.root.after(400, lambda: self._trigger_complete(final_number))
 
     def _trigger_complete(self, final_number):

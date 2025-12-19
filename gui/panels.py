@@ -15,11 +15,13 @@ class PanelBase(ctk.CTkFrame):
         self.configure(fg_color=self._colors["panel_bg"])
 
 class LeftPanel(PanelBase):
-    def __init__(self, master, on_spin_click, on_toggle_bgm, on_toggle_se, on_toggle_fullscreen, **kwargs):
+    def __init__(self, master, on_spin_click, on_toggle_bgm, on_toggle_se, on_bgm_vol, on_se_vol, on_toggle_fullscreen, **kwargs):
         super().__init__(master, **kwargs)
         self.on_spin_click = on_spin_click
         self.on_toggle_bgm = on_toggle_bgm
         self.on_toggle_se = on_toggle_se
+        self.on_bgm_vol = on_bgm_vol
+        self.on_se_vol = on_se_vol
         self.on_toggle_fullscreen = on_toggle_fullscreen
 
         # Layout
@@ -56,33 +58,53 @@ class LeftPanel(PanelBase):
         # 3. Audio Controls (Bottom Left)
         self.frame_controls = ctk.CTkFrame(self, fg_color="transparent")
         self.frame_controls.grid(row=4, column=0, sticky="sw", padx=20, pady=20)
-
-        # BGM Toggle
+        
+        # --- BGM Group ---
+        self.fr_bgm = ctk.CTkFrame(self.frame_controls, fg_color="transparent")
+        self.fr_bgm.pack(side="left", padx=(0, 10))
+        
         self.btn_bgm = ctk.CTkButton(
-            self.frame_controls, text="🎵", width=40, height=40,
-            font=("Apple Color Emoji", 20) if "Apple" in ctk.get_appearance_mode() else ("Segoe UI Emoji", 20),
-            fg_color="transparent", hover_color=self.btn_spin._fg_color, # Temporary hover
+            self.fr_bgm, text="🎵", width=40, height=40,
+            font=("Segoe UI Emoji", 20),
+            fg_color="transparent", hover_color=self.btn_spin._fg_color,
             command=self._on_click_bgm
         )
-        self.btn_bgm.pack(side="left", padx=5)
+        self.btn_bgm.pack(side="left")
+        
+        self.slider_bgm = ctk.CTkSlider(
+            self.fr_bgm, from_=0, to=1, number_of_steps=20,
+            width=80, command=self.on_bgm_vol
+        )
+        self.slider_bgm.set(1.0) 
+        self.slider_bgm.pack(side="left", padx=5)
 
-        # SE Toggle
+        # --- SE Group ---
+        self.fr_se = ctk.CTkFrame(self.frame_controls, fg_color="transparent")
+        self.fr_se.pack(side="left", padx=(0, 10))
+
         self.btn_se = ctk.CTkButton(
-            self.frame_controls, text="🔊", width=40, height=40,
+            self.fr_se, text="🔊", width=40, height=40,
             font=("Segoe UI Emoji", 20),
             fg_color="transparent", hover_color=self.btn_spin._fg_color,
             command=self._on_click_se
         )
-        self.btn_se.pack(side="left", padx=5)
+        self.btn_se.pack(side="left")
         
-        # Fullscreen Toggle
+        self.slider_se = ctk.CTkSlider(
+            self.fr_se, from_=0, to=1, number_of_steps=20,
+            width=80, command=self.on_se_vol
+        )
+        self.slider_se.set(1.0) 
+        self.slider_se.pack(side="left", padx=5)
+        
+        # --- Fullscreen ---
         self.btn_fs = ctk.CTkButton(
             self.frame_controls, text="⛶", width=40, height=40,
             font=("Segoe UI Emoji", 20),
             fg_color="transparent", hover_color=self.btn_spin._fg_color,
             command=self._on_click_fullscreen
         )
-        self.btn_fs.pack(side="left", padx=5)
+        self.btn_fs.pack(side="left", padx=(0, 10))
 
         self.apply_theme_initial()
 

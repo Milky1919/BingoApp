@@ -31,24 +31,36 @@ class BingoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)              # Right Panel
         self.grid_rowconfigure(0, weight=1)
 
+        # Load Data
+        self.game_data = self.dm.load()
+        
+        # Apply Volume Settings
+        init_bgm_vol = self.game_data.get("volume_bgm", 1.0)
+        init_se_vol = self.game_data.get("volume_se", 1.0)
+        
+        self.audio.set_bgm_volume(init_bgm_vol)
+        self.audio.set_se_volume(init_se_vol)
+
         # Components
         self.left_panel = LeftPanel(
             self, 
             on_spin_click=self.start_spin,
             on_toggle_bgm=self.toggle_bgm,
             on_toggle_se=self.toggle_se,
+            on_bgm_vol=self._on_change_bgm_vol,
+            on_se_vol=self._on_change_se_vol,
             on_toggle_fullscreen=self.toggle_fullscreen
         )
         self.left_panel.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Set Slider Initial Values
+        self.left_panel.slider_bgm.set(init_bgm_vol)
+        self.left_panel.slider_se.set(init_se_vol)
 
         self.right_panel = RightPanel(self)
         self.right_panel.grid(row=0, column=1, sticky="nsew", padx=(0, 10), pady=10)
         
-        # Theme Toggle (Floating or Top-Right Overlay? 
-        # Plan was "near audio controls". Let's put it on LeftPanel for simplicity,
-        # but since LeftPanel is already instantiated, we can add it there or 
-        # add a small button in top corner of Window.
-        # Let's add a small toggle switch to LeftPanel via method for cleaner code)
+        # Theme Toggle
         self._add_theme_toggle()
 
         # Keybinds
@@ -71,6 +83,23 @@ class BingoApp(ctk.CTk):
         
         self.is_fullscreen = False
         self.windowed_geometry = f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}"
+
+    def _on_change_bgm_vol(self, val):
+        self.audio.set_bgm_volume(val)
+        # Save (auto-save)
+        # To avoid lag, we could verify if changed significantly, but direct save is safest for "auto save" request
+        # We assume file write is fast enough or OS buffers it.
+        # However, to prevent spam, we can read current SE vol from audio manager or cache it?
+        # Let's just read from loaded data? No that's old.
+        # We need current SE vol.
+        # Let's utilize the slider value properly.
+        se_vol = self.left_panel.slider_se.get()
+        self.dm.save_volume(val, se_vol)
+
+    def _on_change_se_vol(self, val):
+        self.audio.set_se_volume(val)
+        bgm_vol = self.left_panel.slider_bgm.get()
+        self.dm.save_volume(bgm_vol, val)
 
     def select_monitor(self, index):
         pass # Deprecated
@@ -126,6 +155,7 @@ class BingoApp(ctk.CTk):
             offvalue="dark"
         )
         # Select correct initial state
+        switch.deselect() # Dark is offvalue
         switch.deselect() # Dark is offvalue
         switch.pack(side="left", padx=20)
 
