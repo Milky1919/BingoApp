@@ -1,0 +1,14 @@
+# Audio Assets Requirements
+
+Please place the following audio files in this directory (`assets/sound/`):
+
+1. **bgm.mp3**
+   - Background music. Loops indefinitely.
+
+2. **move.wav**
+   - Sound effect for cursor movement (short beep or tick).
+
+3. **decide.wav**
+   - Sound effect for final number selection (fanfare or chime).
+
+Note: The application will run safely (silent mode) if these files are missing.
