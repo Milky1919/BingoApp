@@ -229,29 +229,41 @@ class BingoApp(ctk.CTk):
         # 1. Update Left Panel to "Moving..." state or maintain last spun number?
         # The animation stopped at 'number'. We want to "Fly" it from Grid to Left.
         
-        # Get start position from (now highlighted) grid cell
-        # Note: on_step_finish was called last, so grid cursor is already there.
-        bbox = self.right_panel.get_cell_bbox(number)
+        # Get start center
+        start_bbox = self.right_panel.get_cell_bbox(number)
+        end_widget = self.left_panel.lbl_number
         
-        if bbox:
+        # NOTE: We do NOT update the UI yet (refresh_ui). We wait for the "Arrrival".
+        # But we DO need to ensure the grid cell looks like it's the source.
+        # Currently it's still "Cursor" state from last step.
+        
+        def on_arrive_at_target():
+             # This runs when the flying number Hits the center (Trigger explosion + Update UI)
+             self.refresh_ui() 
+             # self.logic.save_game() - Removed, already saved in start_spin
+        
+        def on_effect_complete():
+             # This runs after explosion fades
+             is_full = len(self.logic.history) >= 75
+             self.left_panel.set_spin_enabled(not is_full)
+
+        if start_bbox:
             from gui.effects import FlyingNumberEffect
-            
-            # Hide the main number temporarily or show something?
-            # Let's keep showing the number but maybe dim it or show "..."
-            # User wants "right number moves to left".
-            # So let's animate:
             
             FlyingNumberEffect(
                 root=self,
-                start_bbox=bbox,
-                end_widget=self.left_panel.lbl_number,
+                start_bbox=start_bbox,
+                end_widget=end_widget,
                 number=number,
                 theme=self.current_theme,
-                on_complete=lambda: self._on_fly_complete(number)
+                on_arrive=on_arrive_at_target, 
+                on_complete=on_effect_complete
             )
         else:
             # Fallback if bbox failed
-            self._on_fly_complete(number)
+            # If no bbox, means we can't animate, so just do the final steps
+            on_arrive_at_target()
+            on_effect_complete()
 
     def _on_fly_complete(self, number):
         # 1. Show final number on Left Panel
